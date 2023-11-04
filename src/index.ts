@@ -1,7 +1,7 @@
-import { createMachine, createActor, assign } from "xstate";
+import { createMachine, createActor, assign, fromPromise } from "xstate";
 
 const feedbackMachine = createMachine({
-  /** @xstate-layout N4IgpgJg5mDOIC5QDMyQEYEMDGBrAdAA4BOA9gLaEAuAxKhjgVKaRANoAMAuoqIabACWVQaQB2vEAA9EARgDsAZnwBONSoAcANg6KArFtmLZAGhABPRIuP4OG64o6yVBvYoAsAX09n6ELHhEZJS0fgEEWOzckvxCIuKSMggKyuqaOvqGxmaWCABMenn48u7qeRylevKyWorevmj+jPjIpMTkNOGcPEggscKiEr1Jee7u+Poqilp5GjUqpVo5iOVFo+ruGmpGedP1IGHNre00sACu6OTC3TECAwnDiGN6qhru+hxaKvJaOrrL+VkHAmDmMMwq1hK+0OgSoAAtMGJcLAaNgADYCMA3Xr9eJDUBJX5FDQlFwVBTyT5LCwrBT4PT2YwuAwaPKjLTQxrhfDozEQGjEOBUTDEKjYvh3PGJRBE-Akyrk+SU34Aub4UrqWq7FSyPJKbw+EBiVhwSQw3C3OKDaUIAC01Ny9tsHBdRjeeim+g9nIYgRIFGolvu+OkTzyAKmtg1LncXwq7kKPqagWO5CDUseCGsGle7y0sfBse+ALyQLlDnKugUpTZSe58MRyPT1szejbctJ+cUrI4UwdtJzdmsenebJJHr0deavNgkGbDwJiCVwMUKg4VR1HFGQPkEeBQ8UpYTWkKKhmBs8QA */
+  /** @xstate-layout N4IgpgJg5mDOIC5QDMyQEYEMDGBrAxNgDYD2sYA2gAwC6ioADmQJYAuzJAdvSAJ6IBaABwB2AHQBWADQgAHogCMVAEwSxAZgCcVCSM1LlAFiVCAvqZmoMOXGIYAnEgFsGrfFYhY8YqCRIRqOiQQJlg2Dm5g+QQFEXUxTUTNIQA2KnUJFIV1BRl+BHUcsSohQvUqBU1MiXVDc0s0Txs7Rxc3Dy9bLADaHlDwrh5o2Pik5LSMrJy8xFVlMRFDJOUqJd0FFPV6kA7m5BJ7J3xOwL6WdkGo2cNDDQlNdRTlIQ3NJZSZhBX5oyTDIUS2WUj22u28+0OYkg4U4UHcjU6YgArgwIJhWJResF+hdIqBoso4gsUi8JDUdM9Kp9CeI9DlDCUyoYRKCEXsDk4oRAYXDYEj0E42KdsecIkNEIZMgkJKoXlpNMo0rpPk9ihsRBIdHpVkJUqzrOCOVyefg+QKhQogoxRZd8YgUoZ4pklAoJJKRFlVJ8GWpRBIFEJDJtFlQqA99U1DZCzYLWOxYfgIFwwGJmJwAG4kXApsG2CGcmNseNQBBpzPYdERQLC61hXHigrPMTMhTPdIUl6ab2aFJiZQPBQM0qFFsRxGsAAWmE4uFghFI5BrIRteLkiA981E70dQhWDw+fEERP+6l+hj3-sHY+axDIkHw9jgrEw9lYS5xYquCBSqq3VVWsQiFQP6fC8zZjJswL6ISWzbJw-hwDwuZnHWn52ggwiaGIuqdv6hKDtoXaHhhsS3GMmgiIG+jMj+17eA4ziuChAyrtEAjGNhuqVHhIgEWGnytmouhCFQvHZDoCpXhYOxslGTjMfWX4BsSpLkjKna5MRAiqM2pRGCIhKhsklEpHReZGtCxYKWha7fr2HqqeU6mVJp+Q0gsA5DkyLLSbmYj5mIhZxmmUDWbatk-iprpqZS+jeq2faeYyI4+Q0Bq2JO06zmFrGIGSvqLD2O57o81LKclbqns8GpVGZYi3uQEA5Q2IhARo2i6PoKjGKJnzaMUw7KIO1T9k85jmEAA */
   id: "feedback",
   context: {
     feedback: "",
@@ -21,36 +21,52 @@ const feedbackMachine = createMachine({
     },
     form: {
       on: {
-        "feedback.update": {
-          actions: assign({
-            feedback: ({ event }) => event.value,
-          }),
-        },
         back: {
           target: "prompt",
         },
-        submit: [
-          {
-            guard: ({ context }) => context.feedback.length > 0,
-            target: "thanks",
+      },
+      initial: "editing",
+      states: {
+        editing: {
+          on: {
+            "feedback.update": {
+              actions: assign({
+                feedback: ({ event }) => event.value,
+              }),
+            },
+            submit: [
+              {
+                guard: ({ context }) => context.feedback.length > 0,
+                target: "submitting",
+              },
+              {
+                actions: assign({
+                  error: "feedback too short",
+                }),
+              },
+            ],
           },
-          {
-            actions: assign({
-              error: "feedback too short",
+        },
+        submitting: {
+          invoke: {
+            src: fromPromise(async () => {
+              await new Promise((res) => {
+                setTimeout(() => res(200), 1000);
+              });
             }),
+            onDone: {
+              target: "#thanks",
+            },
           },
-        ],
+        },
       },
     },
     thanks: {
+      id: "thanks",
       on: {
         close: {
           target: "closed",
-          actions: [
-            () => console.log("logging closed"),
-            () => console.log("logging some feedback"),
-            ({ context, event }) => console.log("the event was: ", event.type),
-          ],
+          actions: [() => console.log("logging closed")],
         },
       },
     },
@@ -88,12 +104,4 @@ feedbackActor.send({
 
 feedbackActor.send({
   type: "submit",
-});
-
-feedbackActor.send({
-  type: "close",
-});
-
-feedbackActor.send({
-  type: "restart",
 });
