@@ -1,0 +1,22 @@
+# Ignore node_modules
+node_modules/
+
+# Ignore TypeScript build output
+dist/
+
+# Ignore any build files or logs
+*.log
+*.tar.gz
+*.zip
+*.swp
+
+# Ignore IDE and editor-specific files
+.vscode/
+.idea/
+*.sublime-*
+*.suo
+*.ntvs*
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
